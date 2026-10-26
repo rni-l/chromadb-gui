@@ -1,0 +1,60 @@
+{
+  "name": "chromadb-gui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A local web GUI for exploring and managing ChromaDB 1.x",
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c blue,green \"pnpm dev:server\" \"pnpm dev:web\"",
+    "dev:server": "tsx watch --clear-screen=false server/index.ts",
+    "dev:web": "vite",
+    "build": "pnpm typecheck && vite build",
+    "start": "NODE_ENV=production tsx server/index.ts",
+    "typecheck": "tsc -p tsconfig.server.json && tsc -p tsconfig.web.json",
+    "test": "vitest run",
+    "seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@chroma-core/default-embed": "^0.1.9",
+    "@codemirror/lang-json": "^6.0.2",
+    "@hono/node-server": "^2.1.5",
+    "@huggingface/transformers": "^3.8.1",
+    "@tanstack/react-query": "^5.104.5",
+    "@tanstack/react-virtual": "^3.14.22",
+    "@uiw/react-codemirror": "^4.25.12",
+    "clsx": "^2.1.1",
+    "echarts": "^6.1.0",
+    "hono": "^4.13.14",
+    "lucide-react": "^1.61.0",
+    "ml-matrix": "^6.15.1",
+    "radix-ui": "^1.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.4",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.7.0",
+    "umap-js": "^1.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "onnxruntime-node",
+      "sharp",
+      "protobufjs",
+      "esbuild"
+    ]
+  }
+}
