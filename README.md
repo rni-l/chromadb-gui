@@ -43,7 +43,7 @@
 需要 Node.js ≥ 20 和 [pnpm](https://pnpm.io/)。
 
 ```bash
-git clone <本仓库地址> chromadb-gui && cd chromadb-gui
+git clone https://github.com/rni-l/chromadb-gui.git && cd chromadb-gui
 pnpm install
 
 pnpm build && pnpm start      # 打开 http://localhost:4580
