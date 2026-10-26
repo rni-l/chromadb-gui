@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "A local web GUI for exploring and managing ChromaDB 1.x",
+  "license": "MIT",
   "scripts": {
     "dev": "concurrently -k -n server,web -c blue,green \"pnpm dev:server\" \"pnpm dev:web\"",
     "dev:server": "tsx watch --clear-screen=false server/index.ts",

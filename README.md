@@ -6,6 +6,7 @@
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-1.x-FF6446)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 功能参考了 [Chroma Explorer](https://www.chroma-explorer.com/#features)，另外加了向量空间可视化和跨连接迁移。
 
@@ -104,3 +105,7 @@ pnpm typecheck
 - 3D 视图
 - CSV / JSONL 导入导出
 - Chroma 0.x
+
+## License
+
+[MIT](LICENSE)
