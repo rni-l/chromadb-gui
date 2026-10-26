@@ -10,6 +10,20 @@
 
 功能参考了 [Chroma Explorer](https://www.chroma-explorer.com/#features)，另外加了向量空间可视化和跨连接迁移。
 
+## 截图
+
+**连接列表**：管理多个 Chroma 连接，显示在线状态、延迟、tenant 和数据库数量。
+
+![连接列表](docs/screenshots/home.png)
+
+**数据浏览**：左侧按 连接 → 数据库 → 集合 导航，顶部显示条数、维度和距离度量；表格里 metadata 自动展开成列，支持文档内容、metadata 条件和 JSON 过滤。
+
+![数据浏览](docs/screenshots/list.png)
+
+**向量空间**：用 PCA 或 UMAP 把向量降到二维，显示主成分的方差解释率；可以采样、按 metadata 着色，滚轮缩放、拖拽平移，点击散点查看记录。
+
+![向量空间](docs/screenshots/space.png)
+
 ## 功能
 
 | | |
