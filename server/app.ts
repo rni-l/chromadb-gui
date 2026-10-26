@@ -53,7 +53,7 @@ export function createApp(store = new ConfigStore()) {
         source: collectionRef,
         target: collectionRef,
         mode: z.enum(["create", "append"]),
-        batchSize: z.number().int().min(10).max(1000).optional(),
+        batchSize: z.number().int().min(1).max(1000).optional(),
       })
       .parse(await c.req.json());
     return c.json(deps.migrations.start(input), 201);

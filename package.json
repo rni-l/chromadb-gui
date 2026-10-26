@@ -17,10 +17,11 @@
   "dependencies": {
     "@chroma-core/default-embed": "^0.1.9",
     "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
     "@hono/node-server": "^2.1.5",
     "@huggingface/transformers": "^3.8.1",
     "@tanstack/react-query": "^5.104.5",
-    "@tanstack/react-virtual": "^3.14.22",
     "@uiw/react-codemirror": "^4.25.12",
     "clsx": "^2.1.1",
     "echarts": "^6.1.0",
