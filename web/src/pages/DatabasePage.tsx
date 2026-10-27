@@ -8,7 +8,7 @@ import { confirm } from "@/components/confirm";
 import { Badge, Button, Dialog, Empty, ErrorBox, Field, Input, Menu, MenuItem, MenuSeparator, Spinner } from "@/components/ui";
 import { PageHeader } from "@/layout/AppShell";
 import { api } from "@/lib/api";
-import { keys, useCollections, useConnections, useDatabases } from "@/lib/queries";
+import { keys, useCollections, useConnections, useDatabases, useReadOnly } from "@/lib/queries";
 import { fmtNum } from "@/lib/utils";
 
 export function DatabasePage() {
@@ -20,6 +20,7 @@ export function DatabasePage() {
   const { data: cols, isLoading, error, refetch, isFetching } = useCollections(cid, db);
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
+  const readOnly = useReadOnly(cid);
   const [newDb, setNewDb] = useState(false);
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -62,11 +63,11 @@ export function DatabasePage() {
                 <Database /> {d.name}
               </MenuItem>
             ))}
-            <MenuSeparator />
-            <MenuItem onSelect={() => setNewDb(true)}>
+            {!readOnly ? <MenuSeparator /> : null}
+            {!readOnly ? <MenuItem onSelect={() => setNewDb(true)}>
               <Plus /> 新建数据库
-            </MenuItem>
-            <MenuItem
+            </MenuItem> : null}
+            {!readOnly ? <MenuItem
               danger
               onSelect={async () => {
                 if (
@@ -82,7 +83,7 @@ export function DatabasePage() {
               }}
             >
               <Trash2 /> 删除此数据库
-            </MenuItem>
+            </MenuItem> : null}
           </Menu>
         }
         subtitle={cols ? `${cols.length} 个集合 · ${fmtNum(totalRecords)} 条记录` : " "}
@@ -91,9 +92,11 @@ export function DatabasePage() {
             <Button variant="ghost" size="icon" onClick={() => refetch()} aria-label="刷新">
               <RefreshCw className={isFetching ? "animate-spin" : ""} />
             </Button>
-            <Button variant="primary" onClick={() => setCreating(true)}>
-              <Plus /> 新建集合
-            </Button>
+            {!readOnly ? (
+              <Button variant="primary" onClick={() => setCreating(true)}>
+                <Plus /> 新建集合
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -109,9 +112,11 @@ export function DatabasePage() {
         <ErrorBox error={error} />
         {cols?.length === 0 ? (
           <Empty icon={<Layers />} title="还没有集合">
-            <Button variant="primary" className="mt-3" onClick={() => setCreating(true)}>
-              <Plus /> 新建集合
-            </Button>
+            {!readOnly ? (
+              <Button variant="primary" className="mt-3" onClick={() => setCreating(true)}>
+                <Plus /> 新建集合
+              </Button>
+            ) : null}
           </Empty>
         ) : null}
 

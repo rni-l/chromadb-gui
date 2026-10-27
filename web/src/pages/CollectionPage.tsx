@@ -1,4 +1,4 @@
-import { Copy, Database, Layers, RefreshCw, ScatterChart, Search, Settings2, Table2 } from "lucide-react";
+import { Copy, Database, Layers, Lock, RefreshCw, ScatterChart, Search, Settings2, Table2 } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { CopyCollectionDialog } from "@/components/CopyCollectionDialog";
@@ -72,6 +72,11 @@ export function CollectionPage() {
             <Badge>{fmtNum(detail.count)} 条</Badge>
             <Badge>{detail.dimension ? `${detail.dimension} 维` : "维度未知"}</Badge>
             <Badge>{detail.space}</Badge>
+            {conn?.readOnly ? (
+              <Badge tone="warn">
+                <Lock className="size-3" /> 只读
+              </Badge>
+            ) : null}
             {ef.profileName ? (
               <Tip content={`Embedding：${ef.profileName}（${{ binding: "手动绑定", auto: "按集合配置自动匹配", ephemeral: "按集合配置临时创建", none: "" }[ef.source]}）`}>
                 <span>

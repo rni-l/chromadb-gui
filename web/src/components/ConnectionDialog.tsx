@@ -143,6 +143,14 @@ export function ConnectionDialog({ open, onOpenChange, editing }: { open: boolea
           </Field>
         </div>
 
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border px-3 py-2.5">
+          <input type="checkbox" checked={Boolean(form.readOnly)} onChange={(e) => set("readOnly", e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
+          <span>
+            <span className="block text-xs font-medium">只读连接</span>
+            <span className="block text-[11px] leading-snug text-subtle">禁止对这个连接写入、修改和删除，也不能作为复制 / 迁移的目标。适合浏览生产库。</span>
+          </span>
+        </label>
+
         {status?.ok ? (
           <div className="flex items-start gap-2 rounded-md bg-success-soft px-3 py-2 text-xs text-success">
             <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />

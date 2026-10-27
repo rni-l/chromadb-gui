@@ -28,12 +28,14 @@
 
 | | |
 |---|---|
-| **连接管理** | 本地 / 自建 / Chroma Cloud，可同时保存多个连接；支持 `X-Chroma-Token`、Bearer、Basic 认证；自动识别 tenant |
+| **连接管理** | 本地 / 自建 / Chroma Cloud，可同时保存多个连接；支持 `X-Chroma-Token`、Bearer、Basic 认证；自动识别 tenant；可设为**只读连接**（服务端拦截所有写入和删除，适合浏览生产库） |
 | **数据库与集合** | 新建 / 删除数据库；新建集合（距离度量、HNSW 参数、Embedding 函数）、重命名、修改 metadata 和 `ef_search`、删除 |
 | **数据浏览** | 分页表格；用 metadata 条件构建器、`where_document` 或原始 JSON 过滤；批量删除、按过滤条件删除 |
 | **记录编辑** | 编辑 document（自动重新计算向量）和 metadata（删掉的 key 会真正从 Chroma 里清除）；单条或批量 JSON 写入，兼容 Chroma 列格式 |
+| **导入 / 导出** | 导出整个集合或当前过滤结果为 JSONL / CSV（可选含向量，流式下载）；从 JSONL、JSON、CSV 导入，字段映射可调、带预览，没有向量的记录自动计算，分批写入可取消 |
 | **向量检查器** | 维度、L2 范数、统计值、逐维热力条、取值分布，一键复制向量 |
-| **语义检索** | 三种查询方式：自然语言、按某条记录找相似、直接输入向量，都可以叠加过滤条件；结果显示距离，以及按距离度量换算的相似度 |
+| **语义检索** | 三种查询方式：自然语言、按某条记录找相似、直接输入向量，都可以叠加过滤条件；结果显示距离，以及按距离度量换算的相似度；每个集合保留检索历史，可收藏、一键重跑 |
+| **复制为代码** | 把当前的浏览或检索转成等价的 Python / JavaScript 客户端代码和 curl 命令（凭据用占位符） |
 | **向量空间** | 服务端做 PCA（高维时用随机化 SVD），浏览器 Web Worker 里跑 UMAP；可按 metadata 分类或数值着色；输入文本高亮最近邻；点击散点查看记录 |
 | **复制 / 迁移** | 集合可在库与库、连接与连接之间复制（比如本地 → Cloud），保留原向量、不重新计算；同库优先用 `fork`；SSE 实时进度，可中途取消 |
 | **Embedding** | 内置本地模型 all-MiniLM-L6-v2；支持 OpenAI 及兼容接口（Jina、Mistral、Voyage、硅基流动、百炼、智谱等）和 Ollama。打开集合时按集合声明的 embedding function 自动匹配本地配置，也可以手动绑定 |
@@ -117,7 +119,7 @@ pnpm typecheck
 - 多用户部署和登录
 - 其他 embedding provider（Cohere、Gemini 原生接口等）
 - 3D 视图
-- CSV / JSONL 导入导出
+- Parquet 导入
 - Chroma 0.x
 
 ## License

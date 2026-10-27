@@ -1,5 +1,6 @@
 import { type Context, Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { stream } from "hono/streaming";
 import { z } from "zod";
 import type {
   CollectionConfigurationJson,
@@ -13,19 +14,24 @@ import type {
 } from "../../shared/types.ts";
 import type { Deps } from "../app.ts";
 import type { RawGetResult, RecordBatch } from "../chroma-rest.ts";
-import { isCloud, mapLimit, similarity, spaceOf } from "../context.ts";
+import { assertWritable, isCloud, mapLimit, similarity, spaceOf } from "../context.ts";
 import { createEmbedder, resolveEmbedding, toChromaEf } from "../embeddings.ts";
 import { pca } from "../pca.ts";
 
 const filter = z.record(z.string(), z.unknown()).nullish();
 const metadata = z.record(z.string(), z.unknown()).nullish();
 const WRITE_BATCH = 500;
+const EXPORT_BATCH = 500;
+/** POST endpoints that only read; every other non-GET request is a write. */
+const READ_ONLY_POSTS = /\/(records\/get|search|projection)$/;
 
 export function collectionRoutes({ store, pool }: Deps) {
   const r = new Hono();
 
   async function scope(c: Context) {
     const connectionId = c.req.param("cid")!;
+    // PATCH checks for itself: rebinding an embedding profile only touches local config.
+    if (!["GET", "PATCH"].includes(c.req.method) && !READ_ONLY_POSTS.test(c.req.path)) assertWritable(store, connectionId);
     const database = c.req.param("db")!;
     const connected = await pool.get(connectionId);
     return { ...connected, connectionId, database };
@@ -110,6 +116,7 @@ export function collectionRoutes({ store, pool }: Deps) {
         : { hnsw: { ef_search: input.efSearch } }
       : undefined;
     if (newName || input.metadata !== undefined || newConfiguration) {
+      assertWritable(store, s.connectionId);
       await s.rest.modifyCollection(s.tenant, s.database, s.info.id, {
         newName,
         newMetadata: input.metadata as CollectionInfo["metadata"],
@@ -203,6 +210,60 @@ export function collectionRoutes({ store, pool }: Deps) {
     const s = await load(c);
     const res = await s.rest.delete(s.tenant, s.database, s.info.id, input);
     return c.json({ deleted: res?.deleted ?? input.ids?.length ?? null });
+  });
+
+  // ---- export --------------------------------------------------------------
+
+  /** Streams every matching record as JSONL or CSV; filters arrive as JSON-encoded query params. */
+  r.get("/:name/export", async (c) => {
+    const input = z
+      .object({
+        format: z.enum(["jsonl", "csv"]).default("jsonl"),
+        embeddings: z.enum(["0", "1"]).default("0"),
+        where: z.string().optional(),
+        whereDocument: z.string().optional(),
+      })
+      .parse(c.req.query());
+    const parseFilter = (raw: string | undefined, label: string) => {
+      if (!raw) return null;
+      try {
+        return filter.parse(JSON.parse(raw)) ?? null;
+      } catch {
+        throw new HTTPException(400, { message: `${label} 不是合法的 JSON 对象` });
+      }
+    };
+    const where = parseFilter(input.where, "where");
+    const whereDocument = parseFilter(input.whereDocument, "where_document");
+    const withEmbeddings = input.embeddings === "1";
+    const s = await load(c);
+
+    c.header("content-type", input.format === "csv" ? "text/csv; charset=utf-8" : "application/x-ndjson; charset=utf-8");
+    c.header("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(`${s.info.name}.${input.format}`)}`);
+    return stream(c, async (out) => {
+      if (input.format === "csv") await out.write(`﻿${csvLine(["id", "document", "metadata", ...(withEmbeddings ? ["embedding"] : [])])}`);
+      for (let offset = 0; ; offset += EXPORT_BATCH) {
+        if (out.aborted) return;
+        const page = await s.rest.get(s.tenant, s.database, s.info.id, {
+          offset,
+          limit: EXPORT_BATCH,
+          where,
+          whereDocument,
+          include: withEmbeddings ? ["documents", "metadatas", "embeddings", "uris"] : ["documents", "metadatas", "uris"],
+        });
+        const rows = toRows(page);
+        const lines = rows.map((row) => {
+          if (input.format === "jsonl") {
+            const { embedding, uri, ...rest } = row;
+            return `${JSON.stringify({ ...rest, ...(uri ? { uri } : {}), ...(withEmbeddings ? { embedding: embedding ?? null } : {}) })}\n`;
+          }
+          const cells = [row.id, row.document ?? "", row.metadata ? JSON.stringify(row.metadata) : ""];
+          if (withEmbeddings) cells.push(row.embedding ? JSON.stringify(row.embedding) : "");
+          return csvLine(cells);
+        });
+        if (lines.length) await out.write(lines.join(""));
+        if (rows.length < EXPORT_BATCH) return;
+      }
+    });
   });
 
   // ---- search ------------------------------------------------------------
@@ -311,6 +372,10 @@ export function collectionRoutes({ store, pool }: Deps) {
   });
 
   return r;
+}
+
+function csvLine(cells: string[]) {
+  return `${cells.map((v) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)).join(",")}\r\n`;
 }
 
 function hasKeys(o: Record<string, unknown> | null | undefined) {

@@ -165,6 +165,41 @@ describe.skipIf(!reachable)("API against Chroma", () => {
     expect(data.scores.every((s) => s.length === 2)).toBe(true);
   });
 
+  it("exports records as JSONL and CSV", async () => {
+    const jsonl = await app.request(`/api${col("docs")}/export?format=jsonl&embeddings=1`);
+    expect(jsonl.headers.get("content-disposition")).toMatch(/docs\.jsonl/);
+    const lines = (await jsonl.text()).trim().split("\n").map((l) => JSON.parse(l));
+    expect(lines).toHaveLength(3);
+    expect(lines.every((l) => l.embedding?.length === 64)).toBe(true);
+
+    const where = encodeURIComponent(JSON.stringify({ kind: "vehicle" }));
+    const csv = await (await app.request(`/api${col("docs")}/export?format=csv&where=${where}`)).text();
+    const [header, ...rows] = csv.replace(/^﻿/, "").trim().split("\r\n");
+    expect(header).toBe("id,document,metadata");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatch(/^b,fast cars on the race track,"\{.*""kind"":""vehicle"".*\}"$/);
+  });
+
+  it("blocks writes on read-only connections but still allows reads", async () => {
+    const ro = (await call<{ id: string }>("POST", "/connections", { name: "ro", url: CHROMA_URL, authType: "none", readOnly: true })).data.id;
+    const roCol = `/connections/${ro}/databases/${db}/collections/docs`;
+    expect((await call("POST", `${roCol}/records/get`, { limit: 1 })).status).toBe(200);
+    expect((await call("POST", `${roCol}/search`, { recordId: "b", nResults: 1 })).status).toBe(200);
+    expect((await call("POST", `${roCol}/records/write`, { mode: "upsert", records: [{ id: "z", embedding: new Array(64).fill(0) }] })).status).toBe(403);
+    expect((await call("POST", `${roCol}/records/delete`, { ids: ["a"] })).status).toBe(403);
+    expect((await call("DELETE", roCol)).status).toBe(403);
+    expect((await call("PATCH", roCol, { name: "docs_ro" })).status).toBe(403);
+    expect((await call("PATCH", roCol, { profileId: null })).status).toBe(200);
+    expect((await call("POST", `/connections/${ro}/databases`, { name: `${db}_ro` })).status).toBe(403);
+    const migrate = await call("POST", "/migrations", {
+      source: { connectionId: cid, database: db, collection: "docs" },
+      target: { connectionId: ro, database: db, collection: "docs_ro_copy" },
+      mode: "create",
+    });
+    expect(migrate.status).toBe(403);
+    await call("DELETE", `/connections/${ro}`);
+  });
+
   it("rejects text search when no embedding is available", async () => {
     await call("POST", col(), { name: "raw_vectors" });
     await call("POST", `${col("raw_vectors")}/records/write`, { mode: "add", records: [{ id: "x", embedding: [1, 0, 0] }] });

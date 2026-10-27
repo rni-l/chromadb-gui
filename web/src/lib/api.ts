@@ -86,6 +86,13 @@ export const api = {
     remove: (cid: string, db: string, name: string, input: DeleteRecordsInput) =>
       request<{ deleted: number | null }>("POST", `${col(cid, db, name)}/records/delete`, input),
   },
+  /** Download URL for a streamed JSONL / CSV export of the records matching `filters`. */
+  exportUrl: (cid: string, db: string, name: string, opts: { format: "jsonl" | "csv"; embeddings: boolean; where?: unknown; whereDocument?: unknown }) => {
+    const q = new URLSearchParams({ format: opts.format, embeddings: opts.embeddings ? "1" : "0" });
+    if (opts.where) q.set("where", JSON.stringify(opts.where));
+    if (opts.whereDocument) q.set("whereDocument", JSON.stringify(opts.whereDocument));
+    return `/api${col(cid, db, name)}/export?${q}`;
+  },
   search: (cid: string, db: string, name: string, input: SearchInput) =>
     request<SearchResult>("POST", `${col(cid, db, name)}/search`, input),
   projection: (cid: string, db: string, name: string, input: ProjectionInput, signal?: AbortSignal) =>

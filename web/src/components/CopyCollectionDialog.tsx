@@ -56,8 +56,9 @@ export function TargetPicker({ value, onChange }: { value: CollectionRef; onChan
       <Field label="连接">
         <Select value={value.connectionId} onChange={(e) => onChange({ ...value, connectionId: e.target.value, database: "" })}>
           {connections?.map((c) => (
-            <option key={c.id} value={c.id}>
+            <option key={c.id} value={c.id} disabled={c.readOnly}>
               {c.name}
+              {c.readOnly ? "（只读）" : ""}
             </option>
           ))}
         </Select>

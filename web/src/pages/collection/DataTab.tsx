@@ -1,14 +1,16 @@
 import type { CollectionDetail, RecordRow } from "@shared/types";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Code2, Download, FileUp, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddRecordsDialog } from "@/components/AddRecordsDialog";
+import { CodeDialog } from "@/components/CodeDialog";
+import { ImportDialog } from "@/components/ImportDialog";
 import { confirm } from "@/components/confirm";
 import { emptyFilters, FilterBar, hasFilters, type Filters } from "@/components/FilterBar";
-import { Button, Empty, ErrorBox, Select, Spinner } from "@/components/ui";
+import { Button, Empty, ErrorBox, Menu, MenuItem, MenuSeparator, Select, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
-import { keys, useInvalidateCollection } from "@/lib/queries";
+import { keys, useInvalidateCollection, useReadOnly } from "@/lib/queries";
 import { cn, fmtNum, fmtScalar, metadataKeys } from "@/lib/utils";
 import type { CollectionCtx } from "../CollectionPage";
 
@@ -22,7 +24,10 @@ export function DataTab({ ctx, detail }: { ctx: CollectionCtx; detail: Collectio
   const [pageSize, setPageSize] = useState(50);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [codeOpen, setCodeOpen] = useState(false);
   const invalidate = useInvalidateCollection();
+  const readOnly = useReadOnly(cid);
 
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: [...keys.records(cid, db, col), { page, pageSize, filters }],
@@ -77,10 +82,54 @@ export function DataTab({ ctx, detail }: { ctx: CollectionCtx; detail: Collectio
       <div className="shrink-0 space-y-3 border-b border-border px-4 py-3">
         <FilterBar value={filters} onChange={applyFilters} metadataKeys={metaCols} />
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="primary" size="sm" onClick={() => setAdding(true)}>
-            <Plus /> 添加记录
+          {!readOnly ? (
+            <Button variant="primary" size="sm" onClick={() => setAdding(true)}>
+              <Plus /> 添加记录
+            </Button>
+          ) : null}
+          {!readOnly ? (
+            <Button variant="outline" size="sm" onClick={() => setImporting(true)}>
+              <FileUp /> 导入
+            </Button>
+          ) : null}
+          <Menu
+            align="start"
+            trigger={
+              <Button variant="outline" size="sm">
+                <Download /> 导出{hasFilters(filters) ? "匹配记录" : ""}
+              </Button>
+            }
+          >
+            {(
+              [
+                ["jsonl", false, "JSONL"],
+                ["jsonl", true, "JSONL（含向量）"],
+                null,
+                ["csv", false, "CSV"],
+                ["csv", true, "CSV（含向量）"],
+              ] as const
+            ).map((opt, i) =>
+              opt ? (
+                <MenuItem
+                  key={i}
+                  onSelect={() => {
+                    const a = document.createElement("a");
+                    a.href = api.exportUrl(cid, db, col, { format: opt[0], embeddings: opt[1], ...filters });
+                    a.download = "";
+                    a.click();
+                  }}
+                >
+                  {opt[2]}
+                </MenuItem>
+              ) : (
+                <MenuSeparator key={i} />
+              ),
+            )}
+          </Menu>
+          <Button variant="ghost" size="sm" onClick={() => setCodeOpen(true)}>
+            <Code2 /> 代码
           </Button>
-          {selected.size ? (
+          {selected.size && !readOnly ? (
             <Button
               variant="outline"
               size="sm"
@@ -93,7 +142,7 @@ export function DataTab({ ctx, detail }: { ctx: CollectionCtx; detail: Collectio
               <Trash2 /> 删除选中 ({selected.size})
             </Button>
           ) : null}
-          {hasFilters(filters) && rows.length ? (
+          {hasFilters(filters) && rows.length && !readOnly ? (
             <Button
               variant="ghost"
               size="sm"
@@ -143,7 +192,7 @@ export function DataTab({ ctx, detail }: { ctx: CollectionCtx; detail: Collectio
         <ErrorBox error={error} className="m-4" />
         {data && !rows.length ? (
           <Empty title={hasFilters(filters) ? "没有匹配的记录" : detail.count ? "这一页没有数据" : "集合是空的"}>
-            {!hasFilters(filters) && !detail.count ? (
+            {!hasFilters(filters) && !detail.count && !readOnly ? (
               <Button variant="primary" className="mt-3" onClick={() => setAdding(true)}>
                 <Plus /> 添加记录
               </Button>
@@ -154,9 +203,11 @@ export function DataTab({ ctx, detail }: { ctx: CollectionCtx; detail: Collectio
           <table className={cn("w-full border-separate border-spacing-0 text-left text-[12.5px]", isFetching && "opacity-70")}>
             <thead className="sticky top-0 z-10 bg-sunken text-[11.5px] text-muted">
               <tr>
-                <th className="w-9 border-b border-border px-3 py-2">
-                  <input type="checkbox" checked={allOnPage} onChange={toggleAll} aria-label="全选" className="accent-[var(--accent)]" />
-                </th>
+                {!readOnly ? (
+                  <th className="w-9 border-b border-border px-3 py-2">
+                    <input type="checkbox" checked={allOnPage} onChange={toggleAll} aria-label="全选" className="accent-[var(--accent)]" />
+                  </th>
+                ) : null}
                 <th className="border-b border-border px-3 py-2 font-medium">ID</th>
                 <th className="border-b border-border px-3 py-2 font-medium">Document</th>
                 {metaCols.map((k) => (
@@ -169,7 +220,7 @@ export function DataTab({ ctx, detail }: { ctx: CollectionCtx; detail: Collectio
             </thead>
             <tbody>
               {rows.map((r) => (
-                <Row key={r.id} row={r} metaCols={metaCols} extraCol={hasExtraMeta} selected={selected.has(r.id)} onToggle={() => toggle(r.id)} onOpen={() => openRecord(r.id)} />
+                <Row key={r.id} row={r} metaCols={metaCols} extraCol={hasExtraMeta} selectable={!readOnly} selected={selected.has(r.id)} onToggle={() => toggle(r.id)} onOpen={() => openRecord(r.id)} />
               ))}
             </tbody>
           </table>
@@ -177,18 +228,28 @@ export function DataTab({ ctx, detail }: { ctx: CollectionCtx; detail: Collectio
       </div>
 
       <AddRecordsDialog cid={cid} db={db} col={col} open={adding} onOpenChange={setAdding} />
+      <ImportDialog cid={cid} db={db} col={col} open={importing} onOpenChange={setImporting} />
+      <CodeDialog
+        cid={cid}
+        detail={detail}
+        op={{ kind: "get", where: filters.where, whereDocument: filters.whereDocument, limit: pageSize, offset: page * pageSize }}
+        open={codeOpen}
+        onOpenChange={setCodeOpen}
+      />
     </>
   );
 }
 
-function Row({ row, metaCols, extraCol, selected, onToggle, onOpen }: { row: RecordRow; metaCols: string[]; extraCol: boolean; selected: boolean; onToggle: () => void; onOpen: () => void }) {
+function Row({ row, metaCols, extraCol, selectable, selected, onToggle, onOpen }: { row: RecordRow; metaCols: string[]; extraCol: boolean; selectable: boolean; selected: boolean; onToggle: () => void; onOpen: () => void }) {
   const rest = Object.entries(row.metadata ?? {}).filter(([k]) => !metaCols.includes(k));
   const cell = "border-b border-border px-3 py-2 align-top";
   return (
     <tr onClick={onOpen} className={cn("cursor-pointer hover:bg-hover", selected && "bg-accent-soft hover:bg-accent-soft")}>
-      <td className={cell} onClick={(e) => e.stopPropagation()}>
-        <input type="checkbox" checked={selected} onChange={onToggle} aria-label={`选择 ${row.id}`} className="accent-[var(--accent)]" />
-      </td>
+      {selectable ? (
+        <td className={cell} onClick={(e) => e.stopPropagation()}>
+          <input type="checkbox" checked={selected} onChange={onToggle} aria-label={`选择 ${row.id}`} className="accent-[var(--accent)]" />
+        </td>
+      ) : null}
       <td className={cn(cell, "max-w-48 truncate font-mono text-[11.5px] text-muted")} title={row.id}>
         {row.id}
       </td>

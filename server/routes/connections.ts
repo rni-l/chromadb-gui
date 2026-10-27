@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import type { ConnectionConfig, ConnectionStatus, DatabaseInfo } from "../../shared/types.ts";
-import { connect } from "../context.ts";
+import { assertWritable, connect } from "../context.ts";
 import type { Deps } from "../app.ts";
 
 const connectionInput = z.object({
@@ -14,6 +14,7 @@ const connectionInput = z.object({
   tenant: z.string().trim().optional(),
   database: z.string().trim().optional(),
   color: z.string().optional(),
+  readOnly: z.boolean().optional(),
 });
 
 async function probe(conn: ConnectionConfig): Promise<ConnectionStatus> {
@@ -74,12 +75,14 @@ export function connectionRoutes({ store, pool }: Deps) {
 
   r.post("/:id/databases", async (c) => {
     const { name } = z.object({ name: z.string().trim().min(1) }).parse(await c.req.json());
+    assertWritable(store, c.req.param("id"));
     const { rest, tenant } = await pool.get(c.req.param("id"));
     await rest.createDatabase(tenant, name);
     return c.json({ name }, 201);
   });
 
   r.delete("/:id/databases/:db", async (c) => {
+    assertWritable(store, c.req.param("id"));
     const { rest, tenant } = await pool.get(c.req.param("id"));
     await rest.deleteDatabase(tenant, c.req.param("db"));
     return c.body(null, 204);

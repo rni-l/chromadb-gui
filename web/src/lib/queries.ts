@@ -15,6 +15,9 @@ export const keys = {
 
 export const useConnections = () => useQuery({ queryKey: keys.connections, queryFn: api.connections.list });
 
+/** Whether the saved connection rejects writes; the server enforces it, the UI just hides the controls. */
+export const useReadOnly = (cid: string | undefined) => Boolean(useConnections().data?.find((c) => c.id === cid)?.readOnly);
+
 export const useDatabases = (cid: string | undefined) =>
   useQuery({ queryKey: keys.databases(cid ?? ""), queryFn: () => api.databases.list(cid!), enabled: Boolean(cid) });
 

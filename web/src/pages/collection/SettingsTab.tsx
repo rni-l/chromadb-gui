@@ -8,7 +8,7 @@ import { confirm } from "@/components/confirm";
 import { JsonEditor } from "@/components/JsonEditor";
 import { Badge, Button, ErrorBox, Field, Input, Select } from "@/components/ui";
 import { api } from "@/lib/api";
-import { useInvalidateCollection, useProfiles } from "@/lib/queries";
+import { useInvalidateCollection, useProfiles, useReadOnly } from "@/lib/queries";
 import { parseJsonObject, spaceLabel } from "@/lib/utils";
 import type { CollectionCtx } from "../CollectionPage";
 
@@ -64,9 +64,12 @@ export function SettingsTab({ ctx, detail, onCopy }: { ctx: CollectionCtx; detai
   });
 
   const declared = detail.embedding.declared;
+  const readOnly = useReadOnly(cid);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 p-6">
+      {readOnly ? <div className="rounded-md bg-warn-soft px-3 py-2 text-xs text-warn">这是只读连接：集合信息和索引配置不能修改，Embedding 绑定仍可调整（只保存在本机）。</div> : null}
+      <fieldset disabled={readOnly} className="contents">
       <Card title="基本信息">
         <Field label="集合名称">
           <div className="flex gap-2">
@@ -103,6 +106,8 @@ export function SettingsTab({ ctx, detail, onCopy }: { ctx: CollectionCtx; detai
           </dd>
         </dl>
       </Card>
+
+      </fieldset>
 
       <Card title="Embedding" description="本工具用它把文本转成向量（写入文档、语义检索、散点高亮）。必须与写入时使用的模型一致。">
         <div className="text-xs">
@@ -145,6 +150,7 @@ export function SettingsTab({ ctx, detail, onCopy }: { ctx: CollectionCtx; detai
         </Field>
       </Card>
 
+      <fieldset disabled={readOnly} className="contents">
       <Card title="索引配置">
         <dl className="grid grid-cols-[140px_1fr] gap-y-1.5 text-xs">
           <dt className="text-muted">距离度量</dt>
@@ -173,6 +179,8 @@ export function SettingsTab({ ctx, detail, onCopy }: { ctx: CollectionCtx; detai
         </details>
       </Card>
 
+      </fieldset>
+
       <ErrorBox error={update.error} />
 
       <Card title="复制与删除">
@@ -186,6 +194,7 @@ export function SettingsTab({ ctx, detail, onCopy }: { ctx: CollectionCtx; detai
           <div className="text-xs text-muted">永久删除集合及其全部 {detail.count.toLocaleString()} 条记录。</div>
           <Button
             variant="danger"
+            disabled={readOnly}
             loading={remove.isPending}
             onClick={async () => {
               if (

@@ -15,6 +15,8 @@ export interface ConnectionConfig {
   /** Preferred database to open first. */
   database?: string;
   color?: string;
+  /** Reject every write (records, collections, databases, migration targets). */
+  readOnly?: boolean;
 }
 
 /** What the browser sees: secrets are never sent back. */

@@ -5,7 +5,7 @@ import { z, ZodError } from "zod";
 import type { MigrationJob } from "../shared/types.ts";
 import { ChromaHttpError } from "./chroma-rest.ts";
 import { ConfigStore } from "./config-store.ts";
-import { ConnectionPool } from "./context.ts";
+import { assertWritable, ConnectionPool } from "./context.ts";
 import { MigrationManager } from "./migrations.ts";
 import { collectionRoutes } from "./routes/collections.ts";
 import { connectionRoutes } from "./routes/connections.ts";
@@ -56,6 +56,7 @@ export function createApp(store = new ConfigStore()) {
         batchSize: z.number().int().min(1).max(1000).optional(),
       })
       .parse(await c.req.json());
+    assertWritable(store, input.target.connectionId);
     return c.json(deps.migrations.start(input), 201);
   });
   api.post("/migrations/:id/cancel", (c) => {

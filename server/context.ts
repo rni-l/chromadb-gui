@@ -34,6 +34,11 @@ export class ConnectionPool {
   }
 }
 
+export function assertWritable(store: ConfigStore, connectionId: string) {
+  const conn = store.getConnection(connectionId);
+  if (conn?.readOnly) throw new HTTPException(403, { message: `连接「${conn.name}」是只读的，不允许写入或删除` });
+}
+
 export async function connect(conn: ConnectionConfig): Promise<Connected> {
   const rest = new ChromaRest(conn);
   const tenant = conn.tenant || (await rest.identity()).tenant || "default_tenant";

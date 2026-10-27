@@ -1,5 +1,5 @@
 import { Braces, ListFilter, Plus, X } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { cn, parseJsonObject } from "@/lib/utils";
 import { JsonEditor } from "./JsonEditor";
 import { Button, ErrorBox, Input, Select } from "./ui";
@@ -61,25 +61,33 @@ export function FilterBar({ value, onChange, metadataKeys = [], className }: { v
   const [docJson, setDocJson] = useState("");
   const [error, setError] = useState<string | null>(null);
   const listId = useId();
+  const applied = useRef(value);
 
-  // Reset local state when filters are cleared from outside.
+  // Reset local state when filters are cleared from outside; show filters set from
+  // outside (e.g. a replayed search) as JSON, since the builder can't express them all.
   useEffect(() => {
     if (!hasFilters(value)) {
       setDoc("");
       setConds([]);
       setWhereJson("");
       setDocJson("");
+    } else if (value !== applied.current) {
+      setMode("json");
+      setWhereJson(value.where ? JSON.stringify(value.where, null, 2) : "");
+      setDocJson(value.whereDocument ? JSON.stringify(value.whereDocument, null, 2) : "");
     }
+    applied.current = value;
   }, [value]);
 
   const apply = () => {
     try {
       setError(null);
-      if (mode === "builder") {
-        onChange({ where: buildWhere(conds), whereDocument: doc.trim() ? { $contains: doc.trim() } : null });
-      } else {
-        onChange({ where: parseJsonObject(whereJson, "where"), whereDocument: parseJsonObject(docJson, "where_document") });
-      }
+      const next =
+        mode === "builder"
+          ? { where: buildWhere(conds), whereDocument: doc.trim() ? { $contains: doc.trim() } : null }
+          : { where: parseJsonObject(whereJson, "where"), whereDocument: parseJsonObject(docJson, "where_document") };
+      applied.current = next;
+      onChange(next);
     } catch (e) {
       setError((e as Error).message);
     }

@@ -4,8 +4,8 @@ import { Copy, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { keys, useInvalidateCollection } from "@/lib/queries";
-import { copyText, parseJsonObject } from "@/lib/utils";
+import { keys, useInvalidateCollection, useReadOnly } from "@/lib/queries";
+import { cn, copyText, parseJsonObject } from "@/lib/utils";
 import { confirm } from "./confirm";
 import { EmbeddingInspector } from "./EmbeddingInspector";
 import { JsonEditor } from "./JsonEditor";
@@ -67,6 +67,7 @@ export function RecordDrawer({
     },
   });
 
+  const readOnly = useReadOnly(cid);
   const remove = useMutation({
     mutationFn: () => api.records.remove(cid, db, col, { ids: [recordId!] }),
     onSuccess: () => {
@@ -95,7 +96,7 @@ export function RecordDrawer({
           <>
             <Button
               variant="ghost"
-              className="mr-auto text-danger hover:text-danger"
+              className={cn("mr-auto text-danger hover:text-danger", readOnly && "hidden")}
               onClick={async () => {
                 if (await confirm({ title: "删除这条记录？", body: <code className="font-mono">{recordId}</code>, danger: true, confirmText: "删除" })) remove.mutate();
               }}
@@ -107,9 +108,11 @@ export function RecordDrawer({
                 <Search /> 查找相似
               </Button>
             ) : null}
-            <Button variant="primary" onClick={() => save.mutate()} loading={save.isPending} disabled={!docChanged && !metaChanged}>
-              保存修改
-            </Button>
+            {!readOnly ? (
+              <Button variant="primary" onClick={() => save.mutate()} loading={save.isPending} disabled={!docChanged && !metaChanged}>
+                保存修改
+              </Button>
+            ) : null}
           </>
         ) : null
       }
