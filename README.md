@@ -64,6 +64,47 @@ CHROMA_URL=http://localhost:8010 pnpm seed   # 可选：写入几个示例集合
 
 `pnpm seed` 会用内置本地模型生成向量，第一次运行要下载模型；连不上 HuggingFace 时在命令前加 `HF_ENDPOINT=https://hf-mirror.com`。
 
+### 用 pm2 常驻运行
+
+想让服务在后台常驻、崩溃自动重启、开机自启，可以用 [pm2](https://pm2.keymetrics.io/)：
+
+```bash
+npm install -g pm2
+pnpm build
+
+pm2 start pnpm --name chromadb-gui -- start   # 环境变量写在前面即可，如 PORT=4600 pm2 start ...
+pm2 save                                       # 保存进程列表
+pm2 startup                                    # 按提示执行输出的命令，开机自启
+```
+
+常用命令：
+
+```bash
+pm2 logs chromadb-gui        # 查看日志
+pm2 restart chromadb-gui     # 重启（更新代码后先 git pull && pnpm install && pnpm build）
+pm2 stop chromadb-gui        # 停止
+pm2 delete chromadb-gui      # 从 pm2 移除
+```
+
+### 用 Docker 运行
+
+```bash
+docker build -t chromadb-gui .
+
+docker run -d --name chromadb-gui \
+  -p 127.0.0.1:4580:4580 \
+  -v chromadb-gui-data:/data \
+  --restart unless-stopped \
+  chromadb-gui
+```
+
+打开 http://localhost:4580。几点说明：
+
+- 容器内监听 `0.0.0.0`，所以端口映射要写成 `127.0.0.1:4580:4580`，只对本机开放（原因见下面[配置](#配置)里的警告）。
+- 连接、API Key 和模型缓存保存在容器的 `/data`（即 `CHROMADB_GUI_HOME`），挂一个卷才不会在重建容器后丢失。
+- 容器里的 `localhost` 指容器自己。要连宿主机上的 Chroma，地址填 `http://host.docker.internal:8010`；Linux 上还需要给 `docker run` 加 `--add-host=host.docker.internal:host-gateway`。
+- 连不上 HuggingFace 时加 `-e HF_ENDPOINT=https://hf-mirror.com`，或在页面「设置」里填。
+
 ### 开发模式
 
 ```bash
