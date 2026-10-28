@@ -8,9 +8,17 @@ const port = Number(process.env.PORT ?? 4580);
 // Local single-user tool: bind to loopback only unless explicitly overridden.
 const hostname = process.env.HOST ?? "127.0.0.1";
 
+// Desktop sidecar: the parent holds our stdin open, so EOF means the app is gone
+// (including a crash) and we should not linger as an orphan.
+if (process.env.CHROMADB_GUI_PARENT_STDIN === "1") {
+  process.stdin.on("end", () => process.exit(0));
+  process.stdin.resume();
+}
+
 const { app } = createApp();
 
-const dist = fileURLToPath(new URL("../web/dist", import.meta.url));
+// WEB_DIST: the desktop bundle ships the server and web assets in different places.
+const dist = process.env.WEB_DIST ?? fileURLToPath(new URL("../web/dist", import.meta.url));
 if (process.env.NODE_ENV === "production") {
   if (!existsSync(dist)) {
     console.error("web/dist 不存在，请先运行 pnpm build");

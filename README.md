@@ -105,6 +105,28 @@ docker run -d --name chromadb-gui \
 - 容器里的 `localhost` 指容器自己。要连宿主机上的 Chroma，地址填 `http://host.docker.internal:8010`；Linux 上还需要给 `docker run` 加 `--add-host=host.docker.internal:host-gateway`。
 - 连不上 HuggingFace 时加 `-e HF_ENDPOINT=https://hf-mirror.com`，或在页面「设置」里填。
 
+### 桌面应用（macOS / Windows）
+
+到 [Releases](https://github.com/rni-l/chromadb-gui/releases) 下载安装包：macOS 选 `aarch64.dmg`（Apple 芯片）或 `x64.dmg`（Intel），Windows 选 `x64-setup.exe`。
+
+桌面版用 [Tauri 2](https://tauri.app/) 做外壳（系统自带的 WebView，不打包 Chromium），内部带一个 Node 运行时跑同一套服务，功能与网页版一致：
+
+- 连接、API Key 和模型缓存与网页版共用 `~/.chromadb-gui`。
+- 服务只监听 `127.0.0.1`，端口从 4590 起自动选空闲的；退出应用时服务一并退出。
+- 导出的文件保存到「下载」目录，完成后自动在访达 / 资源管理器中定位。
+- 服务日志：macOS `~/Library/Logs/com.rnil.chromadb-gui/server.log`，Windows `%LOCALAPPDATA%\com.rnil.chromadb-gui\logs\server.log`。
+
+安装包没有签名：macOS 第一次打开时右键 →「打开」，或执行 `xattr -cr "/Applications/Chroma GUI.app"`；Windows 弹出 SmartScreen 时点「更多信息 → 仍要运行」。
+
+自己构建需要额外装 [Rust](https://rustup.rs/)：
+
+```bash
+pnpm desktop:build   # 产物在 src-tauri/target/release/bundle/
+pnpm desktop:dev     # 开发：pnpm dev + 桌面窗口，热更新（首次需先跑一次 pnpm desktop:prepare）
+```
+
+`desktop:build` 会先下载 Node 运行时（国内可设 `NODE_MIRROR=https://npmmirror.com/mirrors/node`）。只能构建本机平台的安装包；推送 `v*` tag 时 GitHub Actions 会构建 macOS（arm64 / x64）和 Windows 包并放进草稿 Release。
+
 ### 开发模式
 
 ```bash
@@ -142,6 +164,8 @@ server/              Hono API
   routes/            connections · collections（记录 / 检索 / 投影）· profiles
 web/src/             React 前端（Vite + Tailwind + TanStack Query + ECharts）
 shared/types.ts      前后端共享类型
+src-tauri/           桌面端外壳（Tauri 2），以 Node sidecar 方式运行 server
+scripts/desktop/     桌面端打包准备：打包 server、裁剪原生依赖、下载 Node 运行时
 scripts/seed.ts      示例数据
 ```
 

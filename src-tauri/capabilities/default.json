@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The page is plain HTTP served by the Node sidecar and uses no Tauri APIs.",
+  "windows": ["main"],
+  "permissions": []
+}
